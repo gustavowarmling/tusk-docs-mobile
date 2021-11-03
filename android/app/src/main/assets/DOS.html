@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Integrapass</title>
+</head>
+<body>
+	<button onclick="onSend();">Send</button>
+	<script type="text/javascript" src="ggwave.js"></script>
+	<script type="text/javascript">
+		var context = null;
+		var ggwave = null;
+		var parameters = null;
+        var instance = null;
+
+        ggwave_factory().then(function(obj) {
+            ggwave = obj;
+            window.ReactNativeWebView.postMessage('init');
+        });
+
+		function init() {
+            if (!context) {
+                context = new AudioContext({sampleRate: 48000});
+
+                parameters = ggwave.getDefaultParameters();
+                parameters.sampleRateInp = context.sampleRate;
+                parameters.sampleRateOut = context.sampleRate;
+                instance = ggwave.init(parameters);
+            }
+        }
+
+        function convertTypedArray(src, type) {
+            var buffer = new ArrayBuffer(src.byteLength);
+            var baseView = new src.constructor(buffer).set(src);
+            return new type(buffer);
+        }
+
+		function onSend(text) {
+            if (!text) return;
+
+            init();
+
+            // pause audio capture during transmission
+
+            // generate audio waveform
+            var waveform = ggwave.encode(instance, text, ggwave.TxProtocolId.GGWAVE_TX_PROTOCOL_AUDIBLE_FAST, 10)
+
+            // play audio
+            var buf = convertTypedArray(waveform, Float32Array);
+            var buffer = context.createBuffer(1, buf.length, context.sampleRate);
+            buffer.getChannelData(0).set(buf);
+            var source = context.createBufferSource();
+            source.buffer = buffer;
+            source.connect(context.destination);
+            source.start(0);
+        }
+	</script>
+</body>
+</html>
